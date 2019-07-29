@@ -1,0 +1,102 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_contributor_menu() {
+  $items['contributors'] = array(
+    'title' => 'Contributors',
+    'page callback' => 'everygirl_contributor_page_callback',
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+/**
+ * Page callback: Press items
+ */
+function everygirl_contributor_page_callback(){
+  $variables = array();
+  $variables['contributors'] = everygirl_contributor_get_contributors();
+  return theme('contributors', $variables);
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_contributor_preprocess_node(&$variables) {
+  if($variables['node']->type == 'contributor'){
+    $node = $variables['node'];
+    $contributor = new Contributor($node);
+    $variables['contributor'] = $contributor;
+    $variables['articles'] = everygirl_contributor_get_articles($contributor->node->nid);
+  }
+}
+
+/**
+ * Returns an array of Articles related to a supplied Contributor node.
+ */
+function everygirl_contributor_get_articles($nid){
+  $articles = array();
+  $contributor = node_load($nid);
+
+  // First get all articles directly linked to contributor using the "Credits" field
+  $query = new ArticleEntityFieldQuery();
+  $query->fieldCondition('field_credits', 'nid', $contributor->nid);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[$node->nid] = new Article($node);
+    }
+  }
+
+  // Second get all articles that match the contributor title search on extra fields
+  $index = search_api_index_load("contributor_match");
+  $query = new SearchApiQuery($index);
+  $query->keys($contributor->title);
+  $query->sort('created', 'DESC');
+  $data = $query->execute();
+  $results = $data['results'];
+  if(!empty($results)){
+    $nids = array_keys($results);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[$node->nid] = new Article($node);
+    }
+  }
+
+  uasort($articles, function($a, $b){
+    if ($a->node->created == $b->node->created) {
+      return 0;
+    }
+    return ($a->node->created < $b->node->created) ? 1 : -1;
+  });
+
+  return $articles;
+}
+
+/**
+ * Return a paged set of contributors.
+ */
+function everygirl_contributor_get_contributors(){
+  $contributors = array();
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'contributor')
+  ->propertyCondition('status', 1)
+  ->propertyOrderBy('created', 'DESC')
+  ->pager(10);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $contributors[] = new Contributor($node);
+    }
+  }
+  return $contributors;
+}
+
+?>

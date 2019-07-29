@@ -1,0 +1,46 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_press_menu() {
+  $items['press'] = array(
+    'title' => 'Press',
+    'page callback' => 'everygirl_press_page_callback',
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+/**
+ * Page callback: Press items
+ */
+function everygirl_press_page_callback(){
+  $variables = array();
+  $variables['press_items'] = everygirl_press_get_press_items();
+  return theme('press', $variables);
+}
+
+/**
+ * Returns an array of Press items.
+ */
+function everygirl_press_get_press_items(){
+  $press = array();
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'press')
+  ->propertyCondition('status', 1)
+  ->propertyOrderBy('created', 'DESC')
+  ->pager(10);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $press[] = new Press($node);
+    }
+  }
+  return $press;
+}
+
+?>

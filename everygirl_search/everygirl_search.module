@@ -1,0 +1,17 @@
+<?php
+
+function everygirl_search_preprocess_search_api_page_results(array &$variables) {
+  drupal_set_title('Search Results');
+  $articles = array();
+  $results = $variables['results']['results'];
+  if(!empty($results)){
+    $nids = array_keys($results);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[] = new Article($node);
+    }
+  }
+  $variables['articles'] = $articles;
+}
+
+?>

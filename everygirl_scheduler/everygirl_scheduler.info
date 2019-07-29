@@ -1,0 +1,5 @@
+name = "Everygirl scheduler"
+description = "Simple scheduling mechanism using content fields and cron"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

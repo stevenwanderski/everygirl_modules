@@ -1,0 +1,13 @@
+<?php
+
+function evergirl_ad_custom_ads(){
+  $results = views_get_view_result('admin_advertisements', 'page');
+  $ads = array();
+  foreach($results as $result){
+    $node = node_load($result->nid);
+    $ads[] = new Advertisement($node);
+  }
+  return $ads;
+}
+
+?>

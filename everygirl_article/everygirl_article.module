@@ -1,0 +1,304 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_article_menu() {
+  $items['articles/get/favorites'] = array(
+    'title' => '',
+    'page callback' => 'everygirl_article_get_favorites_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['articles/get/featured'] = array(
+    'title' => '',
+    'page callback' => 'everygirl_article_get_featured_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['articles/get/random'] = array(
+    'title' => '',
+    'page callback' => 'everygirl_article_get_random_callback',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['articles/get/category/%/grid'] = array(
+    'title' => '',
+    'page callback' => 'everygirl_article_get_category_callback_grid',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  $items['articles/get/category/%/list'] = array(
+    'title' => '',
+    'page callback' => 'everygirl_article_get_category_callback_list',
+    'page arguments' => array(3),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_article_preprocess_node(&$variables) {
+  if($variables['node']->type == 'article'){
+    $node = $variables['node'];
+
+    $related_articles_results = views_get_view_result('similarterms', 'block', $node->nid);
+    $related_articles_sidebar = array();
+    $related_articles_footer = array();
+
+    if(!empty($related_articles_results)){
+      $related_articles_sidebar_results = array_slice($related_articles_results, 0, 5);
+      foreach ($related_articles_sidebar_results as $result) {
+        $related_node = node_load($result->nid);
+        $related_articles_sidebar[] = new Article($related_node);
+      }
+
+      foreach ($related_articles_results as $result) {
+        $related_node = node_load($result->nid);
+        $related_articles_footer[] = new Article($related_node);
+      }
+    }
+
+    // get the next article
+    $article_next = '';
+    $query = new ArticleEntityFieldQuery();
+    $query->fieldCondition('field_primary_category', 'tid', $node->field_primary_category['und'][0]['tid'], '=')
+          ->fieldCondition('field_date', 'value', $node->field_date['und'][0]['value'], '<')
+          ->range(0, 1);
+    $result = $query->execute();
+    if(!empty($result['node'])){
+      $nid_result = array_shift($result['node']);
+      $article_next_node = node_load($nid_result->nid);
+      $article_next = new Article($article_next_node);
+    }else{
+      $query = new ArticleEntityFieldQuery();
+      $query->range(0, 1);
+      $result = $query->execute();
+      if(isset($result['node'])){
+        $nid_result = array_shift($result['node']);
+        $article_next_node = node_load($nid_result->nid);
+        $article_next = new Article($article_next_node);
+      }
+    }
+
+    $variables['article'] = new Article($node);
+    $variables['related_articles_sidebar'] = $related_articles_sidebar;
+    $variables['related_articles_footer'] = $related_articles_footer;
+    $variables['article_next'] = $article_next;
+  }
+}
+
+/**
+ * Page callback: Get favorite articles
+ */
+function everygirl_article_get_favorites_callback(){
+  $favorited_articles = everygirl_article_get_favorites(3);
+  print theme('hero_items', array('articles' => $favorited_articles));
+}
+
+/**
+ * Page callback: Get featured articles
+ */
+function everygirl_article_get_featured_callback(){
+  $featured_articles = array();
+  $query = new ArticleEntityFieldQuery();
+  $query->fieldCondition('field_featured', 'value', '1', '=')
+  ->range(0, 3);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $featured_articles[] = new Article($node);
+    }
+  }
+  print theme('hero_items', array('articles' => $featured_articles));
+}
+
+/**
+ * Page callback: Get featured articles
+ */
+function everygirl_article_get_random_callback(){
+  $articles = array();
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'article')
+  ->propertyCondition('status', 1)
+  ->addTag('random_articles')
+  ->range(0, 3);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[] = new Article($node);
+    }
+  }
+  print theme('hero_items', array('articles' => $articles));
+}
+
+/**
+ * Page callback: Get articles per category
+ */
+function everygirl_article_get_category_callback_grid($tid){
+  $exclude_nids = array();
+  if(!empty($_GET['exclude_nids'])){
+    $exclude_nids = explode(',', $_GET['exclude_nids']);
+  }
+  $articles_data = everygirl_article_get_articles_per_category_with_pager($tid, 12, array('exclude_nids' => $exclude_nids));
+  $pager = $articles_data['pager'];
+  $articles_data['next_page'] = ($pager['total'] - $pager['start']) > $pager['limit'] ? floor($pager['start'] / $pager['limit']) + 1 : '';
+  $articles_data['markup'] = theme('category_grid', array('articles' => $articles_data['articles']));
+  $articles_data['tid'] = $tid;
+  unset($articles_data['articles']);
+  $json = json_encode($articles_data);
+  print $json;
+}
+
+/**
+ * Page callback: Get articles per category
+ */
+function everygirl_article_get_category_callback_list($tid){
+  $articles_data = everygirl_article_get_articles_per_category_with_pager($tid, 15, array('check_for_filters' => TRUE));
+  $pager = $articles_data['pager'];
+  $articles_data['next_page'] = ($pager['total'] - $pager['start']) > $pager['limit'] ? floor($pager['start'] / $pager['limit']) + 1 : '';
+  $articles_data['markup'] = theme('category_list', array('articles' => $articles_data['articles']));
+  unset($articles_data['articles']);
+  $json = json_encode($articles_data);
+  print $json;
+}
+
+/**
+ * Returns an array of Articles tagged with the supplied category name.
+ * @param string $tid - the taxonomy term id
+ * @param array $options
+ *   array(
+ *     quantity => int,
+ *     featured_is_null => boolen,
+ *     pager => int
+ *   )
+ * @return array
+ */
+function everygirl_article_get_articles_per_category($tid, $options = array()){
+  $articles = array();
+  $query = new ArticleEntityFieldQuery();
+
+  if(!empty($options['range']) && isset($options['range'][0]) && isset($options['range'][1])){
+    $query->range($options['range'][0], $options['range'][1]);
+  }
+
+  if(!empty($options['featured_is_null'])){
+    $query->addTag('featured_is_null');
+  }
+
+  if(!empty($options['pager'])){
+    $query->pager($options['pager']);
+  }
+
+  if($tid != 'all' && $term = taxonomy_term_load($tid)){
+    // get all children tids
+    $tids = array_keys(taxonomy_get_children($term->tid, 1));
+    // add the parent tid to the condition check
+    $tids[] = $term->tid;
+    $taxonomy_field = '';
+    switch ($term->vid) {
+      case '1':
+        $taxonomy_field = 'field_category';
+        break;
+
+      case '2':
+        $taxonomy_field = 'field_city_term';
+        break;
+    }
+    if($taxonomy_field){
+      $query->fieldCondition($taxonomy_field, 'tid', $tids, 'IN');
+    }
+  }
+
+  if(count($_GET) > 1 && !empty($options['check_for_filters'])){
+    $query = query_include_filters($query, 'article');
+  }
+
+  $result = $query->execute();
+
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[] = new Article($node);
+    }
+  }
+  return $articles;
+}
+
+/**
+ * Returns an array containing Articles tagged with the supplied category name, and renderable pager array.
+ * @param string $tid - the taxonomy term id
+ * @param int $quantity - results per page
+ * @return array
+ */
+function everygirl_article_get_articles_per_category_with_pager($tid, $quantity, $options = array()){
+  $data = array('articles' => array(), 'pager' => NULL);
+  $query = new ArticleEntityFieldQuery();
+  $query->pager($quantity);
+
+  if(!empty($options['exclude_nids'])){
+    $query->propertyCondition('nid', $options['exclude_nids'], 'NOT IN');
+  }
+
+  if(!empty($options['check_for_filters'])){
+    $query = query_include_filters($query, 'article');
+  }
+
+  if($tid != 'all' && $term = taxonomy_term_load($tid)){
+    // get all children tids
+    $tids = array_keys(taxonomy_get_children($term->tid, 1));
+    // add the parent tid to the condition check
+    $tids[] = $term->tid;
+    $query->fieldCondition('field_category', 'tid', $tids, 'IN');
+  }
+
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $data['articles'][] = new Article($node);
+    }
+  }
+  $data['pager'] = $query->pager;
+  return $data;
+}
+
+/**
+ * Returns an array containing Articles tagged as favorite.
+ */
+function everygirl_article_get_favorites($quantity){
+  $articles = array();
+  $query = new ArticleEntityFieldQuery();
+  $query->fieldCondition('field_favorite', 'value', '1', '=')
+  ->range(0, $quantity);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $articles[] = new Article($node);
+    }
+  }
+  return $articles;
+}
+
+
+/**
+ * Implements hook_query_TAG_alter()
+ */
+function everygirl_article_query_random_articles_alter(QueryAlterableInterface $query) {
+  $query->orderRandom();
+}
+
+?>

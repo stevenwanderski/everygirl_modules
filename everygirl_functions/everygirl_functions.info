@@ -1,0 +1,20 @@
+name = "Everygirl functions"
+description = "Misc convenience functions"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"
+
+files[] = 'classes/node.class.php'
+files[] = 'classes/category.class.php'
+files[] = 'classes/job.class.php'
+files[] = 'classes/article.class.php'
+files[] = 'classes/webform.class.php'
+files[] = 'classes/contributor.class.php'
+files[] = 'classes/press.class.php'
+files[] = 'classes/page.class.php'
+files[] = 'classes/advertisement.class.php'
+files[] = 'classes/grid_item.class.php'
+files[] = 'classes/list_item.class.php'
+files[] = 'classes/product.class.php'
+files[] = 'classes/article_entity_field_query.class.php'
+files[] = 'classes/job_entity_field_query.class.php'

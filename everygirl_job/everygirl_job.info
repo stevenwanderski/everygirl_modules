@@ -1,0 +1,5 @@
+name = "Everygirl job"
+description = "All functionality relating to a Job"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

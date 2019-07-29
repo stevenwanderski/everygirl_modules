@@ -1,0 +1,132 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_home_menu() {
+  $items['home'] = array(
+    'title' => 'The Lifemap for Everygirls Everywhere',
+    'page callback' => 'everygirl_home_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Page builder: home
+ */
+function everygirl_home_page(){
+  drupal_set_title('The Lifemap for Everygirls Everywhere');
+  $variables = array();
+
+  // featured articles
+  $featured_articles = everygirl_home_featured_articles();
+  $variables['featured_hero'] = array_slice($featured_articles, 0, 3);
+  $variables['featured_list'] = array_slice($featured_articles, 3);
+  $variables['featured_articles_nids'] = implode(',', array_keys($featured_articles));
+
+  // favorites
+  $variables['favorites'] = everygirl_home_favorites();
+
+  // all categories
+  $exclude_nids = array_keys($featured_articles);
+  $articles_all_categories_data = everygirl_article_get_articles_per_category_with_pager('all', 12, array('exclude_nids' => $exclude_nids));
+  $variables['articles_all_categories'] = $articles_all_categories_data['articles'];
+
+  // category terms
+  $variables['categories'] = main_menu_terms();
+
+  // shopify products
+  $variables['products'] = everygirl_home_get_shopify_products();
+
+  return theme('everygirl_home', $variables);
+}
+
+/**
+ * Return an array (9) of featured articles
+ */
+function everygirl_home_featured_articles(){
+  $featured_articles = array();
+  $query = new ArticleEntityFieldQuery();
+  $query->fieldCondition('field_featured', 'value', '1', '=')
+        ->range(0, 9);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $featured_articles[$node->nid] = new Article($node);
+    }
+  }
+  return $featured_articles;
+}
+
+/**
+ * Return an array (5) of favorited articles
+ */
+function everygirl_home_favorites(){
+  $favorited_articles = array();
+  $query = new ArticleEntityFieldQuery();
+  $query->fieldCondition('field_favorite', 'value', '1', '=')
+        ->range(0, 5);
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $favorited_articles[] = new Article($node);
+    }
+  }
+  return $favorited_articles;
+}
+
+/**
+ * Implements hook_query_TAG_alter()
+ */
+function everygirl_home_query_featured_is_null_alter(QueryAlterableInterface $query) {
+  $query->leftJoin('field_data_field_featured', 'o', 'node.nid = o.entity_id');
+  // build the query that checks for either NULL or value of 0 for the field_featured_value db field
+  $or = db_or()
+    ->condition('o.field_featured_value', 0)
+    ->isNull('o.field_featured_value');
+  $query->condition($or);
+}
+
+/**
+ * Return a list of Shopify products
+ */
+function everygirl_home_get_shopify_products(){
+  $products = array();
+  $_products_keyed_array = array();
+  $api_url = 'https://';
+  $api_url .= variable_get('shopify_apikey', '');
+  $api_url .= ':';
+  $api_url .= variable_get('shopify_password', '');
+  $api_url .= '@';
+  $api_url .= variable_get('shopify_domain');
+
+  $api_collection = '/admin/collects.json?collection_id=12443384';
+  $response = drupal_http_request($api_url . $api_collection, array());
+  $collect_json = json_decode($response->data);
+
+  $api_products = '/admin/products.json';
+  $response = drupal_http_request($api_url . $api_products, array());
+  $product_json = json_decode($response->data);
+
+  if(!empty($product_json->products)){
+    foreach($product_json->products as $product){
+      $_products_keyed_array[$product->id] = $product;
+    }
+  }
+
+  if(!empty($collect_json->collects)){
+    foreach($collect_json->collects as $collect){
+      $products[] = new Product($_products_keyed_array[$collect->product_id]);
+    }
+  }
+
+  return $products;
+}
+
+?>

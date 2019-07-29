@@ -1,0 +1,5 @@
+name = "Everygirl article"
+description = "All functionality relating to an Article"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

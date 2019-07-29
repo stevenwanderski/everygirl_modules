@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function everygirl_form_form_node_form_alter(&$form, &$form_state, $form_id){
+  if ($form['#node']->type == 'article') {
+    $form['field_legacy_type']['#access'] = FALSE;
+    $form['options']['promote']['#access'] = FALSE;
+    $form['options']['sticky']['#access'] = FALSE;
+    $form['author']['#weight'] = 100;
+  }
+  // remove "sticky" and "promoted" node options
+  unset($form['options']['promote']);
+  unset($form['options']['sticky']);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function everygirl_form_form_user_login_alter(&$form, &$form_state, $form_id){
+  unset($form['name']['#description']);
+  unset($form['pass']['#description']);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function everygirl_form_views_bulk_operations_form_alter(&$form, &$form_state, $vbo) {
+  $form['select']['#type'] = 'container';
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function everygirl_form_form_user_register_form_alter(&$form, &$form_state) {
+  $form['account']['roles']['#default_value'] = array(3);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function everygirl_form_form_metatag_config_edit_form_alter(&$form, &$form_state) {
+  $form['#submit'][] = "everygirl_form_metatag_redirect";
+}
+
+function everygirl_form_metatag_redirect($form, &$form_state){
+  $form_state['redirect'] = '/admin/config/search/metatags/config/global:frontpage';
+}
+
+?>

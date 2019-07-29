@@ -1,0 +1,5 @@
+name = "Everygirl page"
+description = "All functionality relating to a Page (content type)"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

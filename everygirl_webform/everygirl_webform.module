@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_webform_preprocess_node(&$variables) {
+  if($variables['node']->type == 'webform'){
+    $node = $variables['node'];
+    // webform_node_view($node, 'full');
+    // dpm(theme_webform_view($node->content));
+    $variables['webform'] = new Webform($node);
+  }
+}
+
+?>

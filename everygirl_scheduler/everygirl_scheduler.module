@@ -1,0 +1,43 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_scheduler_menu() {
+  $items['everygirl/scheduler'] = array(
+    'page callback' => 'everygirl_scheduler_run',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Publish all nodes that are:
+ * 1. Unpublished
+ * 2. Flagged for auto-publishing (field_scheduled_publish value is TRUE)
+ * 3. Date is in the past
+ */
+function everygirl_scheduler_run(){
+  $content = array();
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', array('article', 'job'))
+  ->propertyCondition('status', 0)
+  ->fieldCondition('field_scheduled_publish', 'value', '1')
+  ->fieldCondition('field_date', 'value', date('U'), '<');
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach($nodes as $node){
+      $node->status = 1;
+      $node->field_scheduled_publish['und'][0]['value'] = '0';
+      node_save($node);
+      watchdog('everygirl_scheduler', $node->title . ' was published', array(), WATCHDOG_NOTICE);
+    }
+  }
+  exit();
+}
+
+?>

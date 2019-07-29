@@ -1,0 +1,151 @@
+<?php
+
+/**
+ * Return the production URL for the given path.
+ */
+function production_url($path){
+  if(starts_with($path, '/')){
+    $path = substr($path, 1);
+  }
+  $live_base = 'http://theeverygirl.com/';
+  return $live_base . $path . '/';
+}
+
+/**
+ * Returns a taxonomy tree containing main menu items.
+ */
+function main_menu_terms(){
+  $tree = taxonomy_get_tree(1, 0, 1);
+  // remove unused terms
+  $unused_terms = array('Uncategorized', 'TEG Updates');
+  foreach ($tree as $index => $term) {
+    if(in_array($term->name, $unused_terms)){
+      unset($tree[$index]);
+    }
+  }
+  return $tree;
+}
+
+/**
+ * Returns a taxonomy tree containing city items.
+ */
+function city_terms(){
+  $tree = taxonomy_get_tree(2, 0, 1);
+  $categories = array();
+  foreach ($tree as $index => $term) {
+    $categories[] = new Category($term);
+  }
+  return $categories;
+}
+
+/**
+ * Returns a taxonomy tree containing city items.
+ */
+function city_terms_nav(){
+  $tree = taxonomy_get_tree(2, 0, 1);
+  $tree = array_slice($tree, 0, 10);
+  $categories = array();
+  foreach ($tree as $index => $term) {
+    $categories[] = new Category($term);
+  }
+  return $categories;
+}
+
+/**
+ * Returns the markup used for content navigation on admin pages.
+ */
+function admin_content_nav(){
+  $uri = $_SERVER['REQUEST_URI'];
+  $links = array(
+    "/admin/content" => "All",
+    "/admin/content/articles" => "Articles",
+    "/admin/content/jobs" => "Jobs",
+    "/admin/content/press" => "Press",
+    "/admin/content/contributors" => "Contributors",
+    "/admin/content/advertisements" => "Advertisements",
+    "/admin/content/pages" => "Pages",
+  );
+
+  $output = array();
+  foreach($links as $path => $label){
+    $output[] = $path == $uri ? $label : "<a href=\"$path\">$label</a>";
+  }
+
+  return implode(" | ", $output);
+}
+
+/**
+ * Returns the categories and node objects necessary to build the main nav drop-down.
+ * @param $term
+ * - Drupal term object
+ */
+function subnav_item_per_term($term){
+  $subnav = array();
+  foreach(taxonomy_get_children($term->tid, 1) as $term_child){
+    $subnav['categories'][] = new Category($term_child);
+  }
+  $subnav['articles'] = everygirl_article_get_articles_per_category($term->tid, array('range' => array(0, 4)));
+  return $subnav;
+}
+
+/**
+ * trims text to a space then adds ellipses if desired
+ * @param string $input text to trim
+ * @param int $length in characters to trim to
+ * @param bool $ellipses if ellipses (...) are to be added
+ * @param bool $strip_html if html tags are to be stripped
+ * @return string
+ */
+function trim_text($input, $length, $ellipses = true, $strip_html = true) {
+    //strip tags, if desired
+    if ($strip_html) {
+        $input = strip_tags($input);
+    }
+
+    //no need to trim, already shorter than trim length
+    if (strlen($input) <= $length) {
+        return $input;
+    }
+
+    //find last space within length
+    $last_space = strrpos(substr($input, 0, $length), ' ');
+    $trimmed_text = substr($input, 0, $last_space);
+
+    //add ellipses (...)
+    if ($ellipses) {
+        $trimmed_text .= '...';
+    }
+
+    return $trimmed_text;
+}
+
+/**
+ * Returns boolean indicating if the provided haystack starts with the provided needle.
+ */
+function starts_with($haystack, $needle){
+  return !strncmp($haystack, $needle, strlen($needle));
+}
+
+/**
+ * Returns boolean indicating if the provided haystack ends with the provided needle.
+ */
+function ends_with($haystack, $needle){
+  return substr($haystack, -strlen($needle)) === $needle;
+}
+
+/**
+ * Adds the appropriate filters (from GET variables) to the supplied EntityFieldQuery object.
+ * @param EntityFieldQuery object $query
+ * @param string $node_type
+ * @return EntityFieldQuery object
+ */
+function query_include_filters($query, $node_type){
+  $fields = field_info_instances('node', $node_type);
+  foreach($_GET as $get_key => $get_value){
+    if($get_key != 'q' && is_numeric($get_value) && isset($fields['field_' . $get_key])){
+      $query->fieldCondition('field_' . $get_key, 'tid', $get_value);
+    }
+  }
+  return $query;
+}
+?>

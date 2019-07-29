@@ -1,0 +1,37 @@
+<?php
+/**
+ * Implements hook_token_info(). This hook will register tow token lname and fname.
+ */
+function everygirl_token_token_info() {
+  $info['tokens']['node']['field_body_teaser'] = array(
+    'name' => t('Body teaser'),
+    'description' => t('Teaser for field_body')
+  );
+  return $info;
+}
+
+/**
+ * Implements hook_tokens(). This hook will operate the token and replace it with it's value.
+ */
+function everygirl_token_tokens($type, $tokens, array $data = array(), array $options = array()) {
+  $replacements = array();
+  $sanitize = !empty($options['sanitize']);
+  if ($type == 'node') {
+    foreach ($tokens as $name => $original) {
+      if($name == 'field_body_teaser'){
+        $replacement_value = '';
+        switch($data['node']->type){
+          case 'job':
+            $replacement_value = $data['node']->title;
+            break;
+          default:
+            $replacement_value = strip_tags(substr($data['node']->field_body['und'][0]['value'], 0, 140)) . '...';
+        }
+        $replacements[$original] = $replacement_value;
+      }
+    }
+  }
+  return $replacements;
+}
+
+?>

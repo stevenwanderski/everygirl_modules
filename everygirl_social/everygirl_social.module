@@ -1,0 +1,179 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_social_menu() {
+  $items['everygirl/social/update'] = array(
+    'page callback' => 'everygirl_social_update_counts',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_cron().
+ */
+function everygirl_social_update_counts() {
+  variable_set('social_followers_facebook', everygirl_facebook_followers());
+  variable_set('social_followers_twitter', everygirl_twitter_followers());
+  variable_set('social_followers_pinterest', everygirl_pinterest_followers());
+  variable_set('social_followers_tumblr', everygirl_tumblr_followers());
+  variable_set('social_followers_instagram', everygirl_instagram_followers());
+  watchdog('everygirl_social', 'Social counts updated', array(), WATCHDOG_NOTICE);
+  exit();
+}
+
+/**
+ * Returns a formatted number to be used when displaying social followers.
+ */
+function social_number_format($number, $abbreviate = FALSE){
+  if($abbreviate){
+    return number_format($number / 1000, 1) . 'k';
+  }
+  return number_format($number);
+}
+
+function pinterest_share_href($url, $image, $title){
+  $output = 'http://www.pinterest.com/pin/create/button/?url=';
+  $output .= $url;
+  if($image){
+    $output .= '&media=' . $image;
+  }
+  if($title){
+    $output .= '&description=' . urlencode($title) . ' %23theeverygirl';
+  }else{
+    $output .= '&description=%23theeverygirl';
+  }
+  return $output;
+}
+
+function facebook_share_href($path){
+  return "http://theeverygirl.com" . $path;
+}
+
+/**
+ * Returns a properly formatted URL used to retrieve Disqus comments and data.
+ */
+function disqus_url(){
+  return production_url(drupal_get_path_alias(current_path()));
+}
+
+/**
+ * ================================================
+ * Global social "likes". These are functions that return social likes for "theeverygirl.com".
+ * ================================================
+ */
+
+/**
+ * Returns the number of Facebook likes, formatted with commas for thousands.
+ */
+function everygirl_facebook_followers(){
+  $response = drupal_http_request('https://graph.facebook.com/TheEverygirl?fields=likes');
+  if(property_exists($response, 'data') && $response->data != ''){
+    $data = json_decode($response->data);
+    return $data->likes;
+  }
+  return 23000;
+}
+
+/**
+ * Returns the number of Twitter followers, formatted with commas for thousands.
+ * Uses this library: https://github.com/J7mbo/twitter-api-php
+ */
+function everygirl_twitter_followers(){
+  $twitter = '';
+  $settings = array(
+    'oauth_access_token' => variable_get('twitter_oauth_access_token', ''),
+    'oauth_access_token_secret' => variable_get('twitter_oauth_access_token_secret', ''),
+    'consumer_key' => variable_get('twitter_consumer_key', ''),
+    'consumer_secret' => variable_get('twitter_consumer_secret', '')
+  );
+  $url = 'https://api.twitter.com/1.1/users/show.json';
+  $getfield = '?screen_name=TheEverygirl_';
+  $requestMethod = 'GET';
+
+  // If something goes wrong with the Twitter API, silently fail
+  try {
+    $twitter = new TwitterAPIExchange($settings);
+  } catch (Exception $e) {
+    return '';
+  }
+
+  $json = $twitter->setGetfield($getfield)
+                  ->buildOauth($url, $requestMethod)
+                  ->performRequest();
+
+  if($json){
+    $data = json_decode($json);
+    if($data && property_exists($data, 'followers_count') && is_numeric($data->followers_count)){
+      return $data->followers_count;
+    }
+  }
+  return 18000;
+}
+
+/**
+ * Returns the number of Pinterest followers, formatted with commas for thousands.
+ * Note that since there is no public API available (as of 11/2013), this function uses simple screen scraping.
+ */
+function everygirl_pinterest_followers(){
+  $metas = get_meta_tags('http://pinterest.com/theeverygirl/');
+  if(isset($metas['pinterestapp:followers']) && is_numeric($metas['pinterestapp:followers'])){
+    return $metas['pinterestapp:followers'];
+  }
+  return 68000;
+}
+
+/**
+ * Returns the number of Tumblr followers, formatted with commas for thousands.
+ * Since Tumblr requires authentication for follower count, we are supplying a static value.
+ */
+function everygirl_tumblr_followers(){
+  return 28512;
+}
+
+/**
+ * Returns the number of Instagram followers, formatted with commas for thousands.
+ */
+function everygirl_instagram_followers(){
+  $url = 'https://api.instagram.com/v1/users/15228231?client_id=' . variable_get('instagram_client_id', '');
+  $response = drupal_http_request($url);
+  if(property_exists($response, 'data') && $response->data != ''){
+    $data = json_decode($response->data);
+    if($data->meta->code == 200 && is_numeric($data->data->counts->followed_by)){
+      return $data->data->counts->followed_by;
+    }
+  }
+  return 30000;
+}
+
+/**
+ * ================================================
+ * Social likes / followers stored in DB from cron runs
+ * ================================================
+ */
+function everygirl_facebook_followers_cached(){
+  return social_number_format(variable_get('social_followers_facebook', 0), TRUE);
+}
+
+function everygirl_twitter_followers_cached(){
+  return social_number_format(variable_get('social_followers_twitter', 17584), TRUE);
+}
+
+function everygirl_pinterest_followers_cached(){
+  return social_number_format(variable_get('social_followers_pinterest', 0), TRUE);
+}
+
+function everygirl_tumblr_followers_cached(){
+  return social_number_format(variable_get('social_followers_tumblr', 0), TRUE);
+}
+
+function everygirl_instagram_followers_cached(){
+  return social_number_format(variable_get('social_followers_instagram', 0), TRUE);
+}
+
+
+
+?>

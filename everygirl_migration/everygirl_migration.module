@@ -1,0 +1,327 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_migration_menu() {
+
+  $items['admin/migration'] = array(
+    'title' => 'Everygirl migration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_migration_category_form'),
+    'access arguments' => array('access administration pages'),
+    'weight' => 51
+  );
+
+  $items['admin/migration/category'] = array(
+    'title' => 'Category map',
+    'type' => MENU_DEFAULT_LOCAL_TASK
+  );
+
+  $items['admin/migration/contributor'] = array(
+    'title' => 'Contributor map',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_migration_contributor_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK
+  );
+
+  $items['admin/migration/image_styles'] = array(
+    'title' => 'Generate image styles',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_migration_image_style_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK
+  );
+
+  $items['admin/migration/primary_categories'] = array(
+    'title' => 'Assign primary category',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_migration_primary_categories_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_LOCAL_TASK
+  );
+
+  $items['admin/migration/date'] = array(
+    'title' => 'Date conversion',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_migration_date_form'),
+    'access arguments' => array('access administration pages'),
+    'weight' => 52,
+    'type' => MENU_LOCAL_TASK
+  );
+
+  return $items;
+}
+
+/**
+ * Form builder: Category map
+ */
+function everygirl_migration_category_form($form_state){
+
+  $form['description'] = array(
+    '#markup' => '<p>This tool builds a new taxonomy structure using the existing WP structure. Many terms are created, removed, and reorganized. This process cannot be reverted!</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Rebuild Article taxonomy'),
+  );
+
+  return $form;
+}
+
+/**
+ * Form submit: Category map
+ */
+function everygirl_migration_category_form_submit($form, &$form_state) {
+  $map = new EverygirlCategoryMap();
+  $map->run();
+}
+
+/**
+ * Form builder: Contributor map
+ */
+function everygirl_migration_contributor_form($form_state){
+
+  $form['description'] = array(
+    '#markup' => '<p>This tool attempts to map a Contributor content type to an Article\'s meta fields (Photography by, Written by, Additional field #1, etc.). This process cannot be reverted!</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Execute Contributor mapping'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit: Contributor map
+ */
+function everygirl_migration_contributor_form_submit($form, &$form_state) {
+  $contributor_map = new EverygirlContributorMap();
+  $contributor_map->run();
+}
+
+/**
+ * Form builder: Image styles
+ */
+function everygirl_migration_image_style_form($form_state){
+
+  $form['description'] = array(
+    '#markup' => '<p>This tool generates all needed image styles for existing nodes.</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Generate image styles for all Articles'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit: Image styles
+ */
+function everygirl_migration_image_style_form_submit($form, &$form_state){
+
+  $image_styles = array(
+    'article_featured_category',
+    'article_featured_nav',
+    'article_footer',
+    'article_full',
+    'article_grid',
+    'article_list',
+    'article_nav',
+    'article_small',
+  );
+
+  // $query = new EntityFieldQuery();
+  // $query->entityCondition('entity_type', 'node')
+  // ->entityCondition('bundle', 'article');
+  // $result = $query->execute();
+
+  // dpm(node_load_multiple(array_keys($result['node'])));
+
+  // $node = node_load(4086);
+  // if(!empty($node->field_image)){
+  //   $style = image_style_load('article_full');
+  //   foreach($node->field_image['und'] as $file){
+  //     $derivative_uri = image_style_path($style['name'], $file['uri']);
+  //     dpm(image_style_create_derivative($style, $file['uri'], $derivative_uri));
+  //   }
+  // }
+}
+
+/**
+ * Form builder: Primary categories
+ */
+function everygirl_migration_primary_categories_form($form_state){
+
+  $form['description'] = array(
+    '#markup' => '<p>This tool assigns to each article a primary category. The first assigned category is used. This process cannot be reverted!</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Execute primary category assignment'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit: Primary categories
+ */
+function everygirl_migration_primary_categories_form_submit($form, &$form_state) {
+  $batch = everygirl_migration_primary_categories_batch();
+  batch_set($batch);
+}
+
+/**
+ * Batch: Primary categories batch definition
+ */
+function everygirl_migration_primary_categories_batch() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', 'article')
+  ->propertyOrderBy('created', 'ASC');
+  $result = $query->execute();
+  $nids = array_keys($result['node']);
+  $nodes = node_load_multiple($nids);
+
+  $node_count = count($nodes);
+  // build the list of operation functions and function arguments
+  foreach($nodes as $nid => $node) {
+    $operations[] = array('everygirl_migration_primary_categories_assign', array($node));
+  }
+  // build the batch instructions
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'everygirl_migration_primary_categories_assign_finished',
+  );
+  return $batch;
+}
+
+/**
+ * Batch: Primary categories batch operation function
+ */
+function everygirl_migration_primary_categories_assign($node, &$context){
+  $context['results'][] = $node->nid . ' : ' . check_plain($node->title);
+  // Optional message displayed under the progressbar.
+  $context['message'] = t('Processing article "@title"', array('@title' => $node->title));
+  // $updated = TRUE;
+
+  if(!empty($node->field_category) && empty($node->field_primary_category)){
+    $node->field_primary_category['und'][0]['tid'] = $node->field_category['und'][0]['tid'];
+    $node->override_changed = $node->changed;
+    $node->path['pathauto'] = FALSE;
+    node_save($node);
+    drupal_set_message($node->title . " (nid: " . $node->nid . ") updated.");
+  }
+}
+
+/**
+ * Batch: Primary categories batch finish
+ */
+function everygirl_migration_primary_categories_assign_finished($success, $results, $operations) {
+  if ($success) {
+    // Here we could do something meaningful with the results.
+    // We just display the number of nodes we processed...
+    drupal_set_message(t('@count articles processed.', array('@count' => count($results))));
+  } else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    drupal_set_message(t('An error occurred while processing @operation with arguments : @args', array('@operation' => $error_operation[0], '@args' => print_r($error_operation[0], TRUE))));
+  }
+}
+
+/**
+ * Form builder: Date
+ */
+function everygirl_migration_date_form($form_state){
+
+  $form['description'] = array(
+    '#markup' => '<p>This tool assigns each node\'s created value to its field_date value. This process cannot be reverted!</p>',
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Execute date conversion'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit: Date
+ */
+function everygirl_migration_date_form_submit($form, &$form_state) {
+  $batch = everygirl_migration_date_batch();
+  batch_set($batch);
+}
+
+/**
+ * Batch: Primary categories batch definition
+ */
+function everygirl_migration_date_batch() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'node')
+  ->entityCondition('bundle', array('article', 'job'))
+  ->propertyOrderBy('created', 'DESC');
+  $result = $query->execute();
+  $nids = array_keys($result['node']);
+  $nodes = node_load_multiple($nids);
+
+  $node_count = count($nodes);
+  // build the list of operation functions and function arguments
+  foreach($nodes as $nid => $node) {
+    $operations[] = array('everygirl_migration_date_assign', array($node));
+  }
+  // build the batch instructions
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'everygirl_migration_date_assign_finished',
+  );
+  return $batch;
+}
+
+/**
+ * Batch: Primary categories batch operation function
+ */
+function everygirl_migration_date_assign($node, &$context){
+  $context['results'][] = $node->nid . ' : ' . check_plain($node->title);
+  // Optional message displayed under the progressbar.
+  $context['message'] = t('Processing article "@title"', array('@title' => $node->title));
+
+  if(empty($node->field_date)){
+    if(property_exists($node, 'publish_on')){
+      $node->field_date['und'][0]['value'] = $node->publish_on;
+      $node->field_scheduled_publish['und'][0]['value'] = '1';
+      $node->publish_on = 0;
+    }else{
+      $node->field_date['und'][0]['value'] = $node->created;
+    }
+    $node->override_changed = $node->changed;
+    $node->path['pathauto'] = FALSE;
+    node_save($node);
+    drupal_set_message($node->title . " (nid: " . $node->nid . ") updated.");
+  }
+}
+
+/**
+ * Batch: Primary categories batch finish
+ */
+function everygirl_migration_date_assign_finished($success, $results, $operations) {
+  if ($success) {
+    // Here we could do something meaningful with the results.
+    // We just display the number of nodes we processed...
+    drupal_set_message(t('@count articles processed.', array('@count' => count($results))));
+  } else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    drupal_set_message(t('An error occurred while processing @operation with arguments : @args', array('@operation' => $error_operation[0], '@args' => print_r($error_operation[0], TRUE))));
+  }
+}
+
+
+?>

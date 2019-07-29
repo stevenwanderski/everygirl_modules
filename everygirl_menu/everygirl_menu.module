@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function everygirl_menu_menu_local_tasks_alter(&$data) {
+  // Make node edit page "View" tabs open in new tab
+  if(arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == 'edit'){
+    if(!empty($data['tabs']) && !empty($data['tabs'][0]['output'])){
+      $data['tabs'][0]['output'][0]['#link']['localized_options'] = array('attributes' => array('target' => '_blank'));
+    }
+  }
+}
+
+/**
+ * Implements hook_menu_breadcrumb_alter().
+ */
+function everygirl_menu_menu_breadcrumb_alter(&$active_trail, $item) {
+  // Make node edit page "View" tabs open in new tab
+  if(arg(0) == 'node' && is_numeric(arg(1)) && arg(2) == 'edit'){
+    foreach($active_trail as $key => $link){
+      if($link['link_path'] == 'node/%'){
+        $active_trail[$key]['localized_options'] = array('attributes' => array('target' => '_blank'));
+      }
+    }
+  }
+}
+
+?>

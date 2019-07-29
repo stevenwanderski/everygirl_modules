@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_job_menu() {
+  $items['jobs'] = array(
+    'title' => 'Categories',
+    'page callback' => 'everygirl_job_list_page_callback',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+/**
+ * Page callback: Job list
+ */
+function everygirl_job_list_page_callback(){
+  $variables = array();
+  $job_type_vocabulary = taxonomy_vocabulary_machine_name_load('job_type');
+  $job_industry_vocabulary = taxonomy_vocabulary_machine_name_load('job_industry');
+  $variables['jobs'] = everygirl_job_get_job_list();
+  $variables['job_type_terms'] = taxonomy_get_tree($job_type_vocabulary->vid);
+  $variables['job_industry_terms'] = taxonomy_get_tree($job_industry_vocabulary->vid);
+  $variables['job_city_terms'] = taxonomy_get_tree(2);
+  return theme('jobs', $variables);
+}
+
+/**
+ * Returns an array of Job objects.
+ */
+function everygirl_job_get_job_list(){
+  $jobs = array();
+  $query = new JobEntityFieldQuery();
+  $query->pager(10);
+
+  // if filters are supplied in the URL
+  if(count($_GET) > 1){
+    $query = query_include_filters($query, 'job');
+  }
+
+  $result = $query->execute();
+  if(isset($result['node'])){
+    $nids = array_keys($result['node']);
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $jobs[] = new Job($node);
+    }
+  }
+  return $jobs;
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_job_preprocess_node(&$variables) {
+  if($variables['node']->type == 'job'){
+    $node = $variables['node'];
+    $variables['job'] = new Job($node);
+  }
+}
+
+?>

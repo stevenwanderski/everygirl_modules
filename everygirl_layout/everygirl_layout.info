@@ -1,0 +1,5 @@
+name = "Everygirl layout"
+description = "System wide templates and layout overrides"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

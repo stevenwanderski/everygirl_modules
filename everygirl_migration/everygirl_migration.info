@@ -1,0 +1,8 @@
+name = "Everygirl migration"
+description = "Custom mapping and reorganization using the legacy Wordpress migration."
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"
+
+files[] = 'everygirl_category_map.class.php'
+files[] = 'everygirl_contributor_map.class.php'

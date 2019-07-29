@@ -1,0 +1,84 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_category_menu_alter(&$items) {
+  $items['taxonomy/term/%taxonomy_term'] = array(
+    'title' => 'Categories',
+    'title callback' => 'everygirl_category_page_title_callback',
+    'title arguments' => array(2),
+    'page callback' => 'everygirl_category_term_page_callback',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+  );
+  $items['cities'] = array(
+    'title' => 'Cities',
+    'page callback' => 'everygirl_category_cities_page_callback',
+    'access arguments' => array('access content'),
+  );
+}
+
+/**
+ * Page callback: Taxonomy term
+ */
+function everygirl_category_term_page_callback($term){
+  $articles = everygirl_article_get_articles_per_category($term->tid, array('pager' => 15, 'check_for_filters' => TRUE));
+  $variables = array();
+  $variables['term'] = taxonomy_term_view($term, 'full');
+  $variables['featured_articles'] = array_slice($articles, 0, 3);
+  $variables['articles'] = array_slice($articles, 3);
+  $variables['category'] = new Category($term);
+  $variables['favorites'] = everygirl_article_get_favorites(5);
+  $variables['is_travel'] = everygirl_category_is_category($term->tid, 'Travel');
+  $variables['is_career'] = everygirl_category_is_category($term->tid, 'Career & Finance');
+  if($variables['is_travel']){
+    $variables['travel_city_terms'] = taxonomy_get_tree(2);
+    $travel_price_vocabulary = taxonomy_vocabulary_machine_name_load('travel_price');
+    $travel_type_vocabulary = taxonomy_vocabulary_machine_name_load('travel_type');
+    $variables['travel_price_terms'] = taxonomy_get_tree($travel_price_vocabulary->vid);
+    $variables['travel_type_terms'] = taxonomy_get_tree($travel_type_vocabulary->vid);
+  }
+  if($variables['is_career']){
+    $variables['career_city_terms'] = taxonomy_get_tree(2);
+    $career_field_vocabulary = taxonomy_vocabulary_machine_name_load('career_field');
+    $variables['career_field_terms'] = taxonomy_get_tree($career_field_vocabulary->vid);
+  }
+  return theme('category', $variables);
+}
+
+/**
+ * Page callback: Cities
+ */
+function everygirl_category_cities_page_callback(){
+  $variables = array();
+  $cities = array();
+  $taxonomy = taxonomy_vocabulary_load(2);
+  $description = $taxonomy->description;
+  foreach(taxonomy_get_tree(2, 0, 1) as $term){
+    $loaded_term = taxonomy_term_load($term->tid);
+    $cities[] = new Category($loaded_term);
+  }
+  $variables['cities'] = $cities;
+  $variables['description'] = $description;
+  return theme('cities', $variables);
+}
+
+/**
+ * Title callback: Taxonomy term
+ */
+function everygirl_category_page_title_callback($term){
+  return $term->name;
+}
+
+/**
+ * Returns TRUE if supplied tid is "Travel" or a child of "Travel"
+ */
+function everygirl_category_is_category($tid, $term_name){
+  $term = array_shift(taxonomy_get_term_by_name($term_name, 'article_category'));
+  if($tid == $term->tid) return TRUE;
+  $term_children = array_keys(taxonomy_get_children($term->tid, 1));
+  return in_array($tid, $term_children);
+}
+
+?>

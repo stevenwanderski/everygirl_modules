@@ -1,0 +1,5 @@
+name = "Everygirl press"
+description = "All functionality relating to a Press Item"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

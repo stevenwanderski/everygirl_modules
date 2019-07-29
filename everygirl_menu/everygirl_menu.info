@@ -1,0 +1,5 @@
+name = "Everygirl menu"
+description = "Misc menu overrides and builders"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

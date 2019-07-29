@@ -1,0 +1,260 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_layout_menu() {
+  $items['admin/flush'] = array(
+    'title' => 'Flush content',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everygirl_layout_admin_flush_form'),
+    'access arguments' => array('access administration pages'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * TECH DEBT: each array element could be trimmed down to a slimmer array
+ */
+function everygirl_layout_theme($existing, $type, $theme, $path) {
+  return array(
+    'everygirl_home' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'home',
+    ),
+    'category' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'category',
+    ),
+    'jobs' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'jobs',
+    ),
+    'press' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'press',
+    ),
+    'contributors' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'contributors',
+    ),
+    'contact' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'contact',
+    ),
+    'cities' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'cities',
+    ),
+    'not_found' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'not-found',
+    ),
+    'not_authorized' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates',
+      'template' => 'not-authorized',
+    ),
+    'category_list' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'category_list',
+    ),
+    'social_large' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'social_large',
+    ),
+    'social_side' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'social_side',
+    ),
+    'social_profile_links' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'social_profile_links',
+    ),
+    'article_left' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'article_left',
+    ),
+    'article_list' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'article_list',
+    ),
+    'article_grid_items' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'article_grid_items',
+    ),
+    'hero_item' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'hero_item',
+    ),
+    'hero_items' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'hero_items',
+    ),
+    'category_grid' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'category_grid',
+    ),
+    'main_nav' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'main_nav',
+    ),
+    'sub_nav_item' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'sub_nav_item',
+    ),
+    'favorites' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'favorites',
+    ),
+    'contributor_info' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'contributor_info',
+    ),
+    'newsletter_signup' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'newsletter_signup',
+    ),
+    'newsletter_popup' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'newsletter_popup',
+    ),
+    'advertising_right_sidebar' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'advertising_right_sidebar',
+    ),
+    'article_more_loader' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'article_more_loader',
+    ),
+    'filters_jobs' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'filters_jobs',
+    ),
+    'filters_travel' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'filters_travel',
+    ),
+    'filters_career' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'filters_career',
+    ),
+    'article_next' => array(
+      'path' => drupal_get_path('theme', 'everygirl') .'/templates/partials',
+      'template' => 'article_next',
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_layout_preprocess_page(&$variables) {
+  $categories = array();
+  foreach(main_menu_terms() as $term){
+    $term->subnav = subnav_item_per_term($term);
+    $categories[] = new Category($term);
+  }
+  $variables['global_menu'] = theme('main_nav', array('categories' => $categories, 'cities' => city_terms_nav()));
+  drupal_add_js(array('everygirl' => array('object' => menu_get_object())), 'setting');
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function everygirl_layout_node_presave($node) {
+  if(property_exists($node, 'override_changed')){
+    $node->changed = $node->override_changed;
+  }
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_layout_preprocess_html(&$variables) {
+  $variables['classes_array'] = array();
+  $variables['facebook_og'] = '';
+
+  if($suggestions = theme_get_suggestions(arg(), 'page', '-')){
+
+    // if a taxonomy page, do not add theme suggestion classes
+    if(starts_with($suggestions[0], 'page-taxonomy')){
+      $variables['classes_array'][] = 'page-category';
+    // if not a node page, add theme suggestion classes
+    }else if(!starts_with($suggestions[0], 'page-node')){
+      foreach ($suggestions as $suggestion) {
+        if ($suggestion != 'page-front') {
+          $variables['classes_array'][] = drupal_html_class($suggestion);
+        }
+      }
+    }
+
+  }
+
+  if($node = menu_get_object()) {
+    $variables['classes_array'][] = drupal_html_class('page-' . $node->type);
+    if($node->type == 'page'){
+      $variables['classes_array'][] = drupal_html_class('page-' . drupal_get_path_alias('node/' . $node->nid));
+    }
+    if($node->type == 'article'){
+      $article = new Article($node);
+      $variables['classes_array'][] = 'article-layout-' . $article->layout;
+      $variables['facebook_og'] = '<meta property="og:image" content="' . $article->featured_image_url('article_full') . '" />';
+      $variables['facebook_og'] .= '<meta property="og:url" content="' . facebook_share_href('/' . drupal_get_path_alias('node/' . $node->nid)) . '" />';
+      $variables['facebook_og'] .= '<meta property="og:title" content="' . $article->title . '" />';
+      $variables['facebook_og'] .= '<meta property="og:description" content="' . strip_tags(substr($article->body, 0, 140)) . '..." />';
+    }
+  }
+
+  if(drupal_is_front_page()){
+    $variables['head_title'] = "The Everygirl";
+  }
+
+}
+
+/**
+ * Implements template_preprocess_views_view_rss().
+ * - Hack to fix double escaped values when using a Views RSS which is a
+ *   views field based output. Ex. node title gets sanitized in views_handler_field_node
+ */
+function everygirl_layout_preprocess_views_view_rss(&$vars) {
+  if (!empty($vars['items'])) {
+    $vars['items'] = strtr($vars['items'], array(
+      '&amp;#039;' => '&#039;',
+      '&amp;quot;' => '&quot;',
+      '&amp;lt;' => '&lt;',
+      '&amp;gt;' => '&gt;',
+      '&amp;amp;' => '&amp;',
+    ));
+  }
+}
+
+/**
+ * Form builder: Admin flush
+ */
+function everygirl_layout_admin_flush_form($form, &$form_state){
+  $form['description'] = array(
+    '#markup' => '<p>This tool will flush all site content. Use this if content is not being properly updated.</p>',
+  );
+  // This is the first form element. It's a textfield with a label, "Name"
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Flush content'),
+  );
+  return $form;
+}
+
+/**
+ * Form submit: Admin flush
+ */
+function everygirl_layout_admin_flush_form_submit($form, &$form_state){
+  if(module_exists('boost')){
+    boost_flush_caches();
+  }else{
+    cache_clear_all();
+  }
+  drupal_set_message(t('Site content has been flushed.'));
+  return $form;
+}

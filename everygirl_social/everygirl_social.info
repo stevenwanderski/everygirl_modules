@@ -1,0 +1,7 @@
+name = "Everygirl social"
+description = "Social network functionality"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"
+
+files[] = 'lib/TwitterAPIExchange.php'

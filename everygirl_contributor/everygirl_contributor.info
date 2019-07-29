@@ -1,0 +1,5 @@
+name = "Everygirl contributor"
+description = "All functionality relating to a Contributor"
+package = "Everygirl"
+core = 7.x
+version = "7.x-dev"

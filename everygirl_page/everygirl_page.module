@@ -1,0 +1,56 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function everygirl_page_menu() {
+  $items['contact'] = array(
+    'title' => 'Contact',
+    'page callback' => 'everygirl_page_contact_callback',
+    'access arguments' => array('access content'),
+  );
+  $items['page-not-found'] = array(
+    'title' => 'Page not found',
+    'page callback' => 'everygirl_page_not_found_callback',
+    'access arguments' => array('access content'),
+  );
+  $items['page-not-authorized'] = array(
+    'title' => 'Page not found',
+    'page callback' => 'everygirl_page_not_authorized_callback',
+    'access arguments' => array('access content'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_preprocess().
+ */
+function everygirl_page_preprocess_node(&$variables) {
+  if($variables['node']->type == 'page'){
+    $node = $variables['node'];
+    $variables['page'] = new Page($node);
+  }
+}
+
+/**
+ * Page callback: Contact
+ */
+function everygirl_page_contact_callback(){
+  return theme('contact');
+}
+
+/**
+ * Page callback: Contact
+ */
+function everygirl_page_not_found_callback(){
+  return theme('not_found');
+}
+
+/**
+ * Page callback: Contact
+ */
+function everygirl_page_not_authorized_callback(){
+  return theme('not_authorized');
+}
+
+?>
